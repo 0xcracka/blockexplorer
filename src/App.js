@@ -19,18 +19,68 @@ const settings = {
 //   https://docs.alchemy.com/reference/alchemy-sdk-api-surface-overview#api-surface
 const alchemy = new Alchemy(settings);
 
+
 function App() {
   const [blockNumber, setBlockNumber] = useState();
+  const [blockInfo, setBlockInfo] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [receipts, setReceipts] = useState([]);
 
   useEffect(() => {
-    async function getBlockNumber() {
-      setBlockNumber(await alchemy.core.getBlockNumber());
+    async function getBlockInfo() {
+      const blockNumber = await alchemy.core.getBlockNumber();
+      setBlockNumber(blockNumber);
+
+      const block = await alchemy.core.getBlockWithTransactions(blockNumber);
+      setBlockInfo(block);
+      setTransactions(block.transactions);
+
+      const fetchedReceipts = [];
+      for (const transaction of block.transactions) {
+        const receipt = await alchemy.core.getTransactionReceipt(transaction.hash);
+        fetchedReceipts.push(receipt);
+      }
+      setReceipts(fetchedReceipts);
     }
 
-    getBlockNumber();
-  });
+    getBlockInfo();
+  }, []);
 
-  return <div className="App">Block Number: {blockNumber}</div>;
+  return (
+    <div className="App">
+      <h1>Block Number: {blockNumber}</h1>
+      {blockInfo && (
+        <div>
+          <h2>Block Information:</h2>
+          <pre>{JSON.stringify(blockInfo, null, 2)}</pre>
+        </div>
+      )}
+      {transactions.length > 0 && (
+        <div>
+          <h2>Transactions:</h2>
+          <ul>
+            {transactions.map((transaction, index) => (
+              <li key={index}>
+                <pre>{JSON.stringify(transaction, null, 2)}</pre>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {receipts.length > 0 && (
+        <div>
+          <h2>Transaction Receipts:</h2>
+          <ul>
+            {receipts.map((receipt, index) => (
+              <li key={index}>
+                <pre>{JSON.stringify(receipt, null, 2)}</pre>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default App;
